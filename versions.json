@@ -1,0 +1,13 @@
+{
+ "default": "v8",
+ "versions": [
+  {
+   "version": "v8",
+   "label": "Version 8",
+   "effective": "2026-05-01",
+   "file": "v8.json",
+   "coverage": "complete",
+   "note": "Full manual — §0 change log, §1 Glossary, §2–§10, §11 Fee Schedule A–F. 5.J split by service (1.1–4.1)."
+  }
+ ]
+}

@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SCN Desk</title>
+<meta name="description" content="Offline reference for the NYS SCN Operations Manual — search, cite, verify.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#1F7F7F">
+<style>
+:root{
+  --paper:#FAFAF8; --card:#FFFFFF; --ink:#1C2B2B; --ink-soft:#51625F;
+  --teal:#1F7F7F; --teal-deep:#0E5F62; --mint:#DDEEE6; --mint-line:#BFDCD0;
+  --gold:#DFAF2B; --gold-ink:#6E5407; --coral:#E04020;
+  --line:#E4E7E2; --shadow:0 1px 3px rgba(28,43,43,.08);
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:"SF Mono",SFMono-Regular,ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.5}
+button{font:inherit;color:inherit;background:none;border:none;padding:0;cursor:pointer}
+:focus-visible{outline:2px solid var(--teal);outline-offset:2px;border-radius:4px}
+mark{background:var(--mint);color:inherit;border-radius:2px;padding:0 1px}
+
+/* ---------- header ---------- */
+header{position:sticky;top:0;z-index:20;background:var(--paper);border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top)}
+.bar{display:flex;align-items:center;gap:10px;padding:10px 14px 8px;max-width:760px;margin:0 auto}
+.bar img{height:26px;width:auto}
+.wordmark{font-family:var(--serif);font-weight:700;font-size:19px;letter-spacing:.01em}
+.wordmark small{font-family:var(--mono);font-weight:400;font-size:11px;color:var(--ink-soft);display:block;letter-spacing:.04em}
+.spacer{flex:1}
+select.ver{font-family:var(--mono);font-size:13px;color:var(--teal-deep);background:var(--mint);border:1px solid var(--mint-line);border-radius:999px;padding:5px 10px;appearance:none;-webkit-appearance:none}
+.iconbtn{color:var(--ink-soft);padding:6px;border-radius:8px;line-height:0}
+.iconbtn:hover{background:var(--mint)}
+.searchrow{max-width:760px;margin:0 auto;padding:0 14px 10px}
+.searchbox{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:9px 12px;box-shadow:var(--shadow)}
+.searchbox svg{flex:none;color:var(--ink-soft)}
+.searchbox input{flex:1;border:none;background:none;font:inherit;font-size:16px;color:var(--ink);min-width:0}
+.searchbox input:focus{outline:none}
+.searchbox .clear{color:var(--ink-soft);font-size:13px;font-family:var(--mono)}
+
+/* ---------- main ---------- */
+main{max-width:760px;margin:0 auto;padding:14px 14px 90px}
+.meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin:2px 2px 12px;letter-spacing:.02em}
+.meta .dot{color:var(--mint-line);padding:0 5px}
+
+/* citation chip — the signature element */
+.cite{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:12.5px;color:var(--teal-deep);
+  background:var(--mint);border:1px solid var(--mint-line);border-radius:999px;padding:3px 10px 3px 9px;white-space:nowrap;
+  transition:transform .06s ease}
+.cite:active{transform:scale(.96)}
+.cite .pp{color:var(--ink-soft)}
+.cite svg{opacity:.55}
+
+.chnote{margin:10px 0 0;font-size:13.5px;line-height:1.5;color:var(--gold-ink);background:#FBF1D3;border:1px solid #EDDCA0;border-radius:10px;padding:9px 12px}
+.chnote b{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;display:block;margin-bottom:2px}
+.badge{display:inline-block;font-family:var(--mono);font-size:11px;color:var(--gold-ink);background:#FBF1D3;border:1px solid #EDDCA0;border-radius:999px;padding:2px 8px;vertical-align:2px}
+
+/* section list */
+.group{margin:18px 0 6px;font-family:var(--mono);font-size:12px;color:var(--ink-soft);letter-spacing:.08em;text-transform:uppercase}
+.seclist{display:flex;flex-direction:column;gap:8px}
+.card{display:block;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;box-shadow:var(--shadow)}
+.card:hover{border-color:var(--mint-line)}
+.card .t{font-family:var(--serif);font-size:16.5px;font-weight:600;margin:6px 0 0;line-height:1.35}
+.card .snip{margin:8px 0 0;font-size:14px;color:var(--ink-soft);line-height:1.5;font-family:var(--serif)}
+.count{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin:14px 2px 8px}
+.empty{margin:40px auto;text-align:center;color:var(--ink-soft);max-width:420px}
+.empty b{font-family:var(--serif);font-size:18px;color:var(--ink);display:block;margin-bottom:6px}
+
+/* ---------- reader ---------- */
+.reader{display:none}
+body.reading .browse{display:none}
+body.reading .reader{display:block}
+.backrow{display:flex;align-items:center;gap:10px;margin:2px 0 14px}
+.back{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:13px;color:var(--teal-deep);padding:6px 10px;border-radius:8px;background:var(--card);border:1px solid var(--line)}
+.rhead{margin:0 0 4px}
+.rhead h1{font-family:var(--serif);font-size:24px;line-height:1.25;margin:10px 0 8px;font-weight:700}
+.rtext{font-family:var(--serif);font-size:16.5px;line-height:1.62;margin-top:18px}
+.rtext p{margin:0 0 14px;white-space:pre-wrap;overflow-wrap:break-word}
+.rtext p.tab{font-family:var(--mono);font-size:12.5px;line-height:1.5;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 12px;overflow-x:auto;white-space:pre}
+.pg{display:inline-block;font-family:var(--mono);font-size:10.5px;color:var(--ink-soft);background:var(--paper);border:1px solid var(--line);border-radius:4px;padding:0 5px;margin:0 2px;vertical-align:2px;user-select:none}
+.hit-target{animation:flash 1.6s ease 1}
+@keyframes flash{0%{background:var(--mint)}100%{background:transparent}}
+@media (prefers-reduced-motion:reduce){.hit-target{animation:none}.cite:active{transform:none}}
+
+/* ---------- ledger sheet ---------- */
+.scrim{position:fixed;inset:0;background:rgba(28,43,43,.35);z-index:40;display:none}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:41;background:var(--card);border-radius:16px 16px 0 0;box-shadow:0 -6px 30px rgba(28,43,43,.18);
+  max-width:760px;margin:0 auto;padding:18px 18px calc(18px + env(safe-area-inset-bottom));display:none;max-height:75vh;overflow:auto}
+body.sheet-open .scrim,body.sheet-open .sheet{display:block}
+.sheet h2{font-family:var(--serif);font-size:19px;margin:0 0 4px}
+.sheet .sub{font-size:13px;color:var(--ink-soft);margin:0 0 14px}
+.ledger{border-top:1px solid var(--line)}
+.lrow{display:flex;gap:12px;padding:12px 2px;border-bottom:1px solid var(--line);align-items:baseline}
+.lrow .v{font-family:var(--mono);font-size:13px;color:var(--teal-deep);flex:none;width:78px}
+.lrow .d{flex:1}
+.lrow .d b{font-size:14.5px}
+.lrow .d p{margin:3px 0 0;font-size:13px;color:var(--ink-soft);line-height:1.45}
+.lrow .cov{font-family:var(--mono);font-size:11px;border-radius:999px;padding:2px 8px;flex:none}
+.cov.complete{color:var(--teal-deep);background:var(--mint);border:1px solid var(--mint-line)}
+.cov.partial{color:var(--gold-ink);background:#FBF1D3;border:1px solid #EDDCA0}
+
+/* toast */
+#toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(8px);z-index:60;
+  background:var(--ink);color:#fff;font-size:13.5px;font-family:var(--mono);border-radius:999px;padding:9px 16px;opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;max-width:88vw;text-align:center}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+footer{max-width:760px;margin:0 auto;padding:0 16px 28px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="bar">
+    <img src="logo.png" alt="HEALI logo">
+    <div class="wordmark">SCN Desk<small id="tagline">SCN Operations Manual</small></div>
+    <div class="spacer"></div>
+    <select class="ver" id="verPick" aria-label="Manual version"></select>
+    <button class="iconbtn" id="ledgerBtn" aria-label="Version ledger" title="Version ledger">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16M4 12h16M4 19h10"/><circle cx="19" cy="19" r="1.4" fill="currentColor" stroke="none"/></svg>
+    </button>
+  </div>
+  <div class="searchrow">
+    <div class="searchbox">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="Search the manual — service, rule, or §cite" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
+      <button class="clear" id="clearBtn" hidden>clear</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="browse">
+    <div class="meta" id="verMeta"></div>
+    <div id="results"></div>
+  </div>
+
+  <div class="reader" id="reader"></div>
+</main>
+
+<footer>Works offline once loaded · Verify payment-critical rates against the PDF page cited</footer>
+
+<div class="scrim" id="scrim"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Version ledger">
+  <h2>Version ledger</h2>
+  <p class="sub">Loaded manual versions and their coverage. Tap a version to switch.</p>
+  <div class="ledger" id="ledger"></div>
+</div>
+
+<div id="toast" role="status"></div>
+
+<script>
+'use strict';
+/* ============ state ============ */
+const $ = (s) => document.querySelector(s);
+let REG = null;            // versions registry
+let VER = null;            // current version entry
+let DATA = null;           // current version data (sections)
+let PARAS = [];            // flattened paragraph index [{si, pi, page, lc, text}]
+const cache = {};          // versionKey -> data
+
+/* ============ boot ============ */
+async function boot(){
+  try{
+    const r = await fetch('versions.json');
+    const j = await r.json();
+    REG = Array.isArray(j) ? {versions:j} : j;
+  }catch(e){
+    REG = {versions:[{version:'v8',label:'Version 8',effective:'',file:'v8.json',coverage:''}]};
+  }
+  const pick = $('#verPick');
+  pick.innerHTML = REG.versions.map(v=>`<option value="${v.version}">${esc(v.label||v.version)}</option>`).join('');
+  const want = (location.hash.match(/^#([^/]+)/)||[])[1];
+  pick.value = (REG.versions.some(v=>v.version===want) && want) || REG.default || REG.versions[REG.versions.length-1].version;
+  pick.onchange = () => loadVersion(pick.value).then(routeFromHash);
+  await loadVersion(pick.value);
+  buildLedger();
+  routeFromHash();
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+
+async function loadVersion(key){
+  VER = REG.versions.find(v=>v.version===key) || REG.versions[0];
+  $('#verPick').value = VER.version;
+  if (!cache[key]){
+    $('#results').innerHTML = '<div class="empty"><b>Loading '+esc(VER.label||key)+'…</b></div>';
+    const r = await fetch(''+(VER.file||key+'.json'));
+    cache[key] = await r.json();
+  }
+  DATA = cache[key];
+  indexParas();
+  $('#tagline').textContent = 'SCN Operations Manual · eff. ' + fmtDate(DATA.effective||VER.effective);
+  $('#verMeta').innerHTML =
+    esc(DATA.label||VER.label) + '<span class="dot">·</span>' + DATA.sections.length + ' sections' +
+    '<span class="dot">·</span>coverage: ' + esc(DATA.coverage||'—');
+  renderSearch($('#q').value);
+}
+
+/* ============ index ============ */
+const MARK = /\[\[p\.(\d+)\]\]\s*/g;
+function indexParas(){
+  PARAS = [];
+  DATA.sections.forEach((s, si)=>{
+    let page = s.pages ? s.pages[0] : 0;
+    s.text.split(/\n{2,}/).forEach((raw, pi)=>{
+      // advance page to the last marker at/inside this paragraph
+      let m, first = null;
+      MARK.lastIndex = 0;
+      while ((m = MARK.exec(raw))) { if (first===null) first = +m[1]; page = +m[1]; }
+      const startPage = first!==null ? first : page;
+      const clean = raw.replace(MARK,'').trim();
+      if (!clean) return;
+      // giant bullet blocks: index bullet-by-bullet so ranking sees focused passages
+      const chunks = clean.length > 700
+        ? clean.split(/\n(?=\s*[•▪◦o]\s)/).flatMap(c => c.length > 1400 ? c.split(/\n(?=\S)/) : [c])
+        : [clean];
+      for (const c of chunks){
+        const t = c.trim();
+        if (t) PARAS.push({si, pi, page:startPage, text:t, lc:t.toLowerCase()});
+      }
+    });
+  });
+}
+
+/* ============ search ============ */
+function tokenize(q){ return q.toLowerCase().replace(/[§]/g,' ').split(/[^a-z0-9./]+/).filter(t=>t.length>1); }
+
+function editDist1(a,b){ // true if Levenshtein distance <= 1
+  if (a===b) return true;
+  const la=a.length, lb=b.length;
+  if (Math.abs(la-lb)>1) return false;
+  let i=0,j=0,edits=0;
+  while (i<la && j<lb){
+    if (a[i]===b[j]){i++;j++;continue;}
+    if (++edits>1) return false;
+    if (la>lb) i++; else if (lb>la) j++; else {i++;j++;}
+  }
+  return edits + (la-i) + (lb-j) <= 1;
+}
+
+function search(q){
+  const toks = tokenize(q);
+  if (!toks.length) return null;
+
+  // §cite / service-number lookup: match against section cites and ids
+  const citeHits = DATA.sections.map((s,si)=>({s,si}))
+    .filter(({s}) => toks.every(t => (s.cite+' '+s.id+' '+s.title).toLowerCase().includes(t)));
+
+  const need = toks.length <= 2 ? toks.length : toks.length - 1;  // soft-AND on 3+ words
+  const scored = [];
+  for (const p of PARAS){
+    let score = 0, hits = 0; const matched = [];
+    for (const t of toks){
+      if (p.lc.includes(t)) { score += t.length>3 ? 3 : 2; hits++; matched.push(t); }
+      else if (t.length>=5){
+        for (const w of p.lc.split(/[^a-z0-9]+/)){
+          if (w.length>=4 && Math.abs(w.length-t.length)<=1 && editDist1(t,w)){ score += 1.5; hits++; matched.push(w); break; }
+        }
+      }
+    }
+    if (hits >= need && score > 0){
+      const sec = DATA.sections[p.si];
+      const tl = sec.title.toLowerCase();
+      for (const t of toks) if (tl.includes(t)) score += 1.2;
+      // density: a focused passage outranks a wall of text with the same terms
+      score += Math.min(3, 900 / Math.max(120, p.text.length));
+      scored.push({p, score, matched});
+    }
+  }
+  scored.sort((a,b)=>b.score-a.score);
+  return { citeHits: citeHits.slice(0,6), paras: scored.slice(0,40), total: scored.length };
+}
+
+/* ============ render: browse & results ============ */
+function renderSearch(q){
+  document.body.classList.remove('reading');
+  const box = $('#results');
+  $('#clearBtn').hidden = !q;
+  if (!q.trim()){ box.innerHTML = renderTOC(); return; }
+  const r = search(q);
+  if (!r || (!r.paras.length && !r.citeHits.length)){
+    box.innerHTML = '<div class="empty"><b>No matches</b>Try fewer words, or a §cite like <span style="font-family:var(--mono)">5.J 2.3</span>.</div>';
+    return;
+  }
+  let html = '';
+  if (r.citeHits.length){
+    html += '<div class="group">Sections</div><div class="seclist">' +
+      r.citeHits.map(({s,si})=>secCard(s,si,'')).join('') + '</div>';
+  }
+  if (r.paras.length){
+    html += `<div class="count">${r.total} passage${r.total===1?'':'s'} · showing ${r.paras.length}</div><div class="seclist">` +
+      r.paras.map(({p,matched})=>{
+        const s = DATA.sections[p.si];
+        return `<button class="card" onclick="openSection(${p.si},${p.pi})">
+          ${chip(s, p.page)} ${flag(s)}
+          <div class="t">${esc(s.title)}</div>
+          <p class="snip">${snippet(p.text, matched)}</p>
+        </button>`;
+      }).join('') + '</div>';
+  }
+  box.innerHTML = html;
+}
+
+function renderTOC(){
+  const groups = {};
+  DATA.sections.forEach((s,si)=>{
+    const g = (s.cite.match(/^§(\d+)/)||[,'—'])[1];
+    (groups[g] = groups[g]||[]).push([s,si]);
+  });
+  const names = {0:'§0 · Updates',1:'§1 · Glossary',2:'§2 · About',3:'§3 · Introduction',4:'§4 · Infrastructure',5:'§5 · Care Delivery',6:'§6 · Performance',7:'§7 · Payments',8:'§8 · Contracts',9:'§9 · Data Governance',10:'§10 · OHIP Privacy & Security',11:'§11 · Fee Schedule'};
+  return Object.keys(groups).sort((a,b)=>a-b).map(g=>
+    `<div class="group">${names[g]||('§'+g)}</div><div class="seclist">`+
+    groups[g].map(([s,si])=>secCard(s,si,summary(s))).join('')+'</div>'
+  ).join('');
+}
+
+function secCard(s,si,snip){
+  return `<button class="card" onclick="openSection(${si})">
+    ${chip(s)} ${flag(s)}
+    <div class="t">${esc(s.title)}</div>
+    ${snip?`<p class="snip">${snip}</p>`:''}
+  </button>`;
+}
+
+function summary(s){
+  const t = s.text.replace(MARK,'').replace(/\s+/g,' ').trim();
+  const body = t.replace(/^[^\n]{0,60}?(?=[A-Z])/,'');
+  return esc((body||t).slice(0,140))+'…';
+}
+
+function snippet(text, matched){
+  const lc = text.toLowerCase();
+  let at = 0;
+  for (const m of matched){ const i = lc.indexOf(m); if (i>-1){ at = i; break; } }
+  const start = Math.max(0, at-70);
+  let s = (start>0?'…':'') + text.slice(start, start+240).replace(/\s+/g,' ') + (text.length>start+240?'…':'');
+  return hl(esc(s), matched);
+}
+
+function hl(escaped, matched){
+  let out = escaped;
+  [...new Set(matched)].sort((a,b)=>b.length-a.length).forEach(m=>{
+    out = out.replace(new RegExp('('+m.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi'), '<mark>$1</mark>');
+  });
+  return out;
+}
+
+/* ============ citation chip ============ */
+function chip(s, page){
+  const pp = page ? `p.${page}` : (s.pages ? `pp.${s.pages[0]}–${s.pages[1]}` : '');
+  return `<span class="cite" role="button" tabindex="0" onclick="copyCite(event,'${s.id}',${page||0})" onkeydown="if(event.key==='Enter')copyCite(event,'${s.id}',${page||0})" title="Copy citation">
+    ${esc(s.cite)}${pp?` <span class="pp">${pp}</span>`:''}
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+  </span>`;
+}
+
+function copyCite(ev, id, page){
+  ev.stopPropagation();
+  const s = DATA.sections.find(x=>x.id===id);
+  const pp = page ? `p. ${page}` : (s.pages ? `pp. ${s.pages[0]}–${s.pages[1]}` : '');
+  const cite = `SCN Operations Manual ${DATA.label||VER.label} (eff. ${fmtDate(DATA.effective||VER.effective)}), ${s.cite} — ${s.title}${pp?', '+pp:''}`;
+  (navigator.clipboard ? navigator.clipboard.writeText(cite) : Promise.reject())
+    .then(()=>toast('Citation copied'))
+    .catch(()=>{ prompt('Copy citation:', cite); });
+}
+
+/* ============ reader ============ */
+function openSection(si, pi){
+  const s = DATA.sections[si];
+  location.hash = `#${VER.version}/${s.id}`;
+  document.body.classList.add('reading');
+  const paras = s.text.split(/\n{2,}/);
+  const html = paras.map((raw, idx)=>{
+    let inner = esc(raw).replace(/\[\[p\.(\d+)\]\]\s*/g, '<span class="pg">p.$1</span> ');
+    const tab = /(^|\n)[^\n]*\S {3,}\S/.test(raw);
+    return `<p id="para-${idx}" class="${tab?'tab':''}">${inner.trim()}</p>`;
+  }).join('');
+  $('#reader').innerHTML = `
+    <div class="backrow">
+      <button class="back" onclick="closeReader()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 5l-7 7 7 7"/></svg> Back
+      </button>
+    </div>
+    <div class="rhead">
+      ${chip(s)} ${flag(s)}
+      <h1>${esc(s.title)}</h1>
+      <div class="meta">${esc(DATA.label||VER.label)}<span class="dot">·</span>eff. ${fmtDate(DATA.effective||VER.effective)}${s.pages?`<span class="dot">·</span>PDF pp. ${s.pages[0]}–${s.pages[1]}`:''}</div>
+      ${s.change_note?`<div class="chnote"><b>Changed in v8</b>${esc(s.change_note)}</div>`:''}
+    </div>
+    <div class="rtext">${html}</div>`;
+  window.scrollTo(0,0);
+  if (pi!=null){
+    const el = document.getElementById('para-'+pi);
+    if (el){ el.scrollIntoView({block:'center'}); el.classList.add('hit-target'); }
+  }
+}
+
+function closeReader(){
+  history.replaceState(null,'','#'+VER.version);
+  document.body.classList.remove('reading');
+  renderSearch($('#q').value);
+}
+
+function routeFromHash(){
+  const m = location.hash.match(/^#[^/]+\/(.+)$/);
+  if (m){
+    const si = DATA.sections.findIndex(s=>s.id===decodeURIComponent(m[1]));
+    if (si>-1){ openSection(si); return; }
+  }
+  renderSearch($('#q').value);
+}
+
+/* ============ flags & ledger ============ */
+function flag(s){
+  const f = s.flags||[]; 
+  if (s.changed || f.includes('v8') || f.includes('changed')) return '<span class="badge">Changed in v8</span>';
+  return '';
+}
+
+function buildLedger(){
+  $('#ledger').innerHTML = REG.versions.map(v=>`
+    <div class="lrow" role="button" tabindex="0" onclick="pickVersion('${v.version}')" onkeydown="if(event.key==='Enter')pickVersion('${v.version}')">
+      <span class="v">${esc(v.version)}</span>
+      <span class="d"><b>${esc(v.label||v.version)}</b> — eff. ${fmtDate(v.effective)}<p>${esc(v.note||'')}</p></span>
+      ${v.coverage?`<span class="cov ${esc(v.coverage)}">${esc(v.coverage)}</span>`:''}
+    </div>`).join('');
+}
+function pickVersion(k){ closeSheet(); loadVersion(k).then(routeFromHash); }
+
+/* ============ chrome ============ */
+const qEl = $('#q');
+let deb;
+qEl.addEventListener('input', ()=>{ clearTimeout(deb); deb = setTimeout(()=>{ history.replaceState(null,'','#'+VER.version); renderSearch(qEl.value); }, 140); });
+$('#clearBtn').onclick = ()=>{ qEl.value=''; renderSearch(''); qEl.focus(); };
+$('#ledgerBtn').onclick = ()=>document.body.classList.add('sheet-open');
+$('#scrim').onclick = closeSheet;
+function closeSheet(){ document.body.classList.remove('sheet-open'); }
+window.addEventListener('hashchange', routeFromHash);
+document.addEventListener('keydown', e=>{ if (e.key==='Escape'){ closeSheet(); if (document.body.classList.contains('reading')) closeReader(); } });
+
+let toastTimer;
+function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),1800); }
+
+function esc(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fmtDate(d){ if(!d) return '—'; const [y,m,dd]=String(d).split('-'); return (m&&dd)?`${+m}/${+dd}/${y}`:d; }
+
+boot();
+</script>
+</body>
+</html>
