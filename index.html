@@ -389,7 +389,7 @@ function openSection(si, pi){
       ${chip(s)} ${flag(s)}
       <h1>${esc(s.title)}</h1>
       <div class="meta">${esc(DATA.label||VER.label)}<span class="dot">·</span>eff. ${fmtDate(DATA.effective||VER.effective)}${s.pages?`<span class="dot">·</span>PDF pp. ${s.pages[0]}–${s.pages[1]}`:''}</div>
-      ${s.change_note?`<div class="chnote"><b>Changed in v8</b>${esc(s.change_note)}</div>`:''}
+      ${s.change_note?`<div class="chnote"><b>Changed in ${esc((DATA.label||VER.label))}</b>${esc(s.change_note)}</div>`:''}
     </div>
     <div class="rtext">${html}</div>`;
   window.scrollTo(0,0);
@@ -416,8 +416,9 @@ function routeFromHash(){
 
 /* ============ flags & ledger ============ */
 function flag(s){
-  const f = s.flags||[]; 
-  if (s.changed || f.includes('v8') || f.includes('changed')) return '<span class="badge">Changed in v8</span>';
+  const f = s.flags||[];
+  const cur = VER && VER.version;
+  if (s.changed || f.includes(cur) || f.includes('changed')) return `<span class="badge">Changed in ${esc((VER&&VER.label)||cur)}</span>`;
   return '';
 }
 

@@ -1,6 +1,14 @@
 {
- "default": "v8",
+ "default": "v9",
  "versions": [
+  {
+   "version": "v9",
+   "label": "Version 9",
+   "effective": "2026-08-12",
+   "file": "v9.json",
+   "coverage": "complete",
+   "note": "Full manual — §0 change log, §1 Glossary, §2–§10, §11 Fee Schedule A–F. 5.J split by service (1.1–4.1). 16 sections flagged Changed in v9 (training accessibility/IPS, screening outreach, member eligibility changes, asthma remediation decision tree, CTS increments, nutrition voucher/household/HPNAP guidance, HRSN Transportation, duplicative services, PMPM reconciliation, gift cards, MCO contracting deadline, provider Responsibility Reviews, fee schedule household caps)."
+  },
   {
    "version": "v8",
    "label": "Version 8",
