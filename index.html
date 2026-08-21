@@ -59,6 +59,8 @@ main{max-width:760px;margin:0 auto;padding:14px 14px 90px}
 .chnote{margin:10px 0 0;font-size:13.5px;line-height:1.5;color:var(--gold-ink);background:#FBF1D3;border:1px solid #EDDCA0;border-radius:10px;padding:9px 12px}
 .chnote b{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;display:block;margin-bottom:2px}
 .badge{display:inline-block;font-family:var(--mono);font-size:11px;color:var(--gold-ink);background:#FBF1D3;border:1px solid #EDDCA0;border-radius:999px;padding:2px 8px;vertical-align:2px}
+.cat{display:inline-block;font-family:var(--mono);font-size:11px;color:var(--teal-deep);background:var(--mint);border:1px solid var(--mint-line);border-radius:999px;padding:2px 8px;vertical-align:2px}
+.topichint{margin:6px 2px 0;font-size:12.5px;color:var(--ink-soft);font-family:var(--sans)}
 
 /* section list */
 .group{margin:18px 0 6px;font-family:var(--mono);font-size:12px;color:var(--ink-soft);letter-spacing:.08em;text-transform:uppercase}
@@ -227,7 +229,61 @@ function indexParas(){
 }
 
 /* ============ search ============ */
+// question words / filler — stripped before matching so full questions ("can a member get
+// housing referrals if...") score on their content words, same as a bare keyword search would.
+const STOPWORDS = new Set(['a','an','the','is','are','was','were','be','been','being','can','could','would','should',
+  'will','shall','do','does','did','if','on','in','of','for','to','and','or','but','so','than','that','this','these',
+  'those','it','its','their','his','her','our','your','my','i','we','you','he','she','they','get','gets','getting',
+  'have','has','had','with','about','from','as','at','by','into','also','how','what','when','where','which','who',
+  'does','not','no','yes','please','need','needs','needed']);
+
+// domain acronym/phrase groups — searching any member of a group also matches the others,
+// so "MLTC" finds "MLTCP", "managed long-term care", etc. without needing the exact manual wording.
+const SYNONYM_GROUPS = [
+  ['mltc','mltcp','managed long term care','managed long-term care'],
+  ['map','medicaid advantage plus'],
+  ['mmc','medicaid managed care'],
+  ['mmmc','mainstream medicaid managed care'],
+  ['hrsn','health related social need','health-related social need'],
+  ['cts','community transition supports','community transitional supports'],
+  ['esmf','enhanced services member file'],
+  ['rdn','registered dietitian nutritionist','registered dietician nutritionist'],
+  ['cdn','certified dietitian nutritionist','certified dietician nutritionist'],
+  ['pmpm','per member per month'],
+  ['mco','managed care organization','managed care organizations'],
+  ['mcos','managed care organization','managed care organizations'],
+  ['ohip','office of health insurance programs'],
+  ['harp','health and recovery plan','health and recovery plans'],
+  ['hiv-snp','hiv snp','hiv special needs plan'],
+  ['ips','interpersonal safety'],
+  ['hpnap','hunger prevention nutrition assistance program'],
+  ['dsig','data and systems implementation guide'],
+  ['ahc','accountable health communities'],
+  ['nyher','new york health equity reform'],
+  ['mtm','medically tailored meals'],
+  ['cahdm','clinically appropriate home delivered meals'],
+  ['ecm','enhanced care management'],
+  ['shin-ny','shinny','statewide health information network for new york'],
+  ['scn','social care network'],
+  ['navigator','navigators','social care navigator','social care navigation'],
+  ['duplicate','duplicative','duplication'],
+  ['referral','referrals','refer','refers','referring'],
+];
+const SYN_LOOKUP = {}; // term -> array of all terms in its group (including itself)
+SYNONYM_GROUPS.forEach(group => group.forEach(term => { SYN_LOOKUP[term] = group; }));
+
 function tokenize(q){ return q.toLowerCase().replace(/[§]/g,' ').split(/[^a-z0-9./]+/).filter(t=>t.length>1); }
+
+// content tokens for topical matching: stopwords removed, each token expanded to its synonym group.
+// returns [{root, variants:[...]}] — root is the original token (used for highlight fallback).
+function contentTokens(q){
+  const toks = [...new Set(tokenize(q).filter(t=>!STOPWORDS.has(t)))]; // dedupe — a repeated word ("member...member") shouldn't inflate the match requirement
+  // also test 2-word phrases against the synonym table (e.g. "hiv snp")
+  const phrase = toks.join(' ');
+  const out = toks.map(t => ({ root: t, variants: SYN_LOOKUP[t] ? SYN_LOOKUP[t] : [t] }));
+  if (SYN_LOOKUP[phrase] && !out.some(o=>o.root===phrase)) out.push({ root: phrase, variants: SYN_LOOKUP[phrase] });
+  return out;
+}
 
 function editDist1(a,b){ // true if Levenshtein distance <= 1
   if (a===b) return true;
@@ -243,36 +299,88 @@ function editDist1(a,b){ // true if Levenshtein distance <= 1
 }
 
 function search(q){
-  const toks = tokenize(q);
-  if (!toks.length) return null;
+  const baseToks = tokenize(q).filter(t=>!STOPWORDS.has(t));
+  if (!baseToks.length) return null;
 
   // §cite / service-number lookup: match against section cites and ids
   const citeHits = DATA.sections.map((s,si)=>({s,si}))
-    .filter(({s}) => toks.every(t => (s.cite+' '+s.id+' '+s.title).toLowerCase().includes(t)));
+    .filter(({s}) => baseToks.every(t => (s.cite+' '+s.id+' '+s.title).toLowerCase().includes(t)));
 
-  const need = toks.length <= 2 ? toks.length : toks.length - 1;  // soft-AND on 3+ words
+  // content tokens: stopwords stripped, acronyms/phrases expanded to their synonym group —
+  // lets a full question ("can a member get housing referrals if...") and a bare keyword
+  // search ("housing referral MLTC") land on the same results.
+  const cToks = contentTokens(q);
+  // soft-AND: short/medium queries tolerate one miss; long natural-language questions
+  // ("can a member get housing referrals if...") often carry words the manual never uses
+  // verbatim (plan brand names, filler the stopword list didn't catch) — require about
+  // half the content words instead of nearly all of them once a query gets long.
+  const need = cToks.length <= 2 ? cToks.length
+    : cToks.length <= 5 ? cToks.length - 1
+    : Math.max(4, Math.ceil(cToks.length * 0.5));
   const scored = [];
   for (const p of PARAS){
     let score = 0, hits = 0; const matched = [];
-    for (const t of toks){
-      if (p.lc.includes(t)) { score += t.length>3 ? 3 : 2; hits++; matched.push(t); }
-      else if (t.length>=5){
+    for (const ct of cToks){
+      let found = null;
+      for (const v of ct.variants){ if (p.lc.includes(v)) { found = v; break; } }
+      if (found) { score += (found.length>3 ? 3 : 2) * (found===ct.root ? 1 : 0.85); hits++; matched.push(found); continue; }
+      if (ct.root.length>=5){
         for (const w of p.lc.split(/[^a-z0-9]+/)){
-          if (w.length>=4 && Math.abs(w.length-t.length)<=1 && editDist1(t,w)){ score += 1.5; hits++; matched.push(w); break; }
+          if (w.length>=4 && Math.abs(w.length-ct.root.length)<=1 && editDist1(ct.root,w)){ score += 1.5; hits++; matched.push(w); break; }
         }
       }
     }
     if (hits >= need && score > 0){
       const sec = DATA.sections[p.si];
       const tl = sec.title.toLowerCase();
-      for (const t of toks) if (tl.includes(t)) score += 1.2;
+      for (const ct of cToks) if (ct.variants.some(v=>tl.includes(v))) score += 1.2;
       // density: a focused passage outranks a wall of text with the same terms
       score += Math.min(3, 900 / Math.max(120, p.text.length));
       scored.push({p, score, matched});
     }
   }
   scored.sort((a,b)=>b.score-a.score);
-  return { citeHits: citeHits.slice(0,6), paras: scored.slice(0,40), total: scored.length };
+
+  // group hits by section into "topics" — surfaces every relevant section (an eligibility
+  // table hit alongside a duplicative-services note, say) instead of just top passages.
+  const bySection = new Map();
+  for (const item of scored){
+    const si = item.p.si;
+    const g = bySection.get(si);
+    if (!g || item.score > g.score) bySection.set(si, { si, score: item.score, item, count: (g?g.count:0)+1 });
+    else g.count++;
+  }
+  const topics = [...bySection.values()].sort((a,b)=>b.score-a.score).slice(0,8);
+
+  return { citeHits: citeHits.slice(0,6), topics, paras: scored.slice(0,40), total: scored.length };
+}
+
+// buckets a section into a short topic label for search grouping — mirrors the §-numbering
+// scheme plus the finer id prefixes used for HRSN sub-services (5j-1-/2-/3-/4-).
+function sectionCategory(s){
+  const cite = s.cite||'', id = s.id||'';
+  if (id.includes('duplicative')) return 'Duplicative Services';
+  if (id.includes('eligibility') || id.includes('documentation-attestation')) return 'Eligibility';
+  if (id.startsWith('5j-')) {
+    if (/^5j-2-/.test(id)) return 'HRSN — Housing';
+    if (/^5j-3-/.test(id)) return 'HRSN — Nutrition';
+    if (/^5j-4-/.test(id)) return 'HRSN — Transportation';
+    if (/^5j-1-/.test(id)) return 'HRSN — Navigation';
+    return 'HRSN Services';
+  }
+  if (/^§0/.test(cite)) return 'Updates';
+  if (/^§1\b/.test(cite)) return 'Glossary';
+  if (/^§2/.test(cite)) return 'About';
+  if (/^§3/.test(cite)) return 'Introduction';
+  if (/^§4/.test(cite)) return 'Infrastructure';
+  if (/^§5/.test(cite)) return 'Care Delivery';
+  if (/^§6/.test(cite)) return 'Performance';
+  if (/^§7/.test(cite)) return 'Payments';
+  if (/^§8/.test(cite)) return 'Contracts';
+  if (/^§9/.test(cite)) return 'Data Governance';
+  if (/^§10/.test(cite)) return 'Privacy & Security';
+  if (/^§11/.test(cite)) return 'Fee Schedule';
+  return '';
 }
 
 /* ============ render: browse & results ============ */
@@ -291,8 +399,23 @@ function renderSearch(q){
     html += '<div class="group">Sections</div><div class="seclist">' +
       r.citeHits.map(({s,si})=>secCard(s,si,'')).join('') + '</div>';
   }
+  if (r.topics.length > 1){
+    // one card per relevant section, tagged by topic (Eligibility, Duplicative Services,
+    // Fee Schedule, ...) — the synthesized-answer alternative for questions that span sections.
+    html += '<div class="group">Topics</div><div class="seclist">' +
+      r.topics.map(({si,item,count})=>{
+        const s = DATA.sections[si];
+        const cat = sectionCategory(s);
+        return `<button class="card" onclick="openSection(${si},${item.p.pi})">
+          ${chip(s, item.p.page)} ${cat?`<span class="cat">${esc(cat)}</span>`:''} ${flag(s)}
+          <div class="t">${esc(s.title)}</div>
+          <p class="snip">${snippet(item.p.text, item.matched)}</p>
+          <div class="topichint">${count} matching passage${count===1?'':'s'} in this section</div>
+        </button>`;
+      }).join('') + '</div>';
+  }
   if (r.paras.length){
-    html += `<div class="count">${r.total} passage${r.total===1?'':'s'} · showing ${r.paras.length}</div><div class="seclist">` +
+    html += `<div class="count">${r.topics.length>1?'All passages · ':''}${r.total} passage${r.total===1?'':'s'} · showing ${r.paras.length}</div><div class="seclist">` +
       r.paras.map(({p,matched})=>{
         const s = DATA.sections[p.si];
         return `<button class="card" onclick="openSection(${p.si},${p.pi})">
