@@ -1,5 +1,5 @@
 /* SCN Desk service worker — bump CACHE version when shipping updates */
-const CACHE = 'scn-desk-v1';
+const CACHE = 'scn-desk-v2';
 const SHELL = [
   './',
   './index.html',
@@ -10,6 +10,7 @@ const SHELL = [
   './icon-maskable-512.png',
   './apple-touch-icon.png',
   './versions.json',
+  './v9.json',
   './v8.json'
 ];
 
